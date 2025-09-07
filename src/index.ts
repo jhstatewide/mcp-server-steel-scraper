@@ -69,6 +69,11 @@ class SteelScraperServer {
                   type: "string",
                   description: "Optional custom user agent string",
                 },
+                maxLength: {
+                  type: "number",
+                  description: "Maximum characters to return (optional, default: no limit). Use to prevent context overflow in large pages.",
+                  default: null,
+                },
               },
               required: ["url"],
             },
@@ -80,13 +85,14 @@ class SteelScraperServer {
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (request.params.name === "scrape_with_browser") {
         try {
-          const { url, returnType = "html", waitFor, timeout = 30000, headers, userAgent } = request.params.arguments as {
+          const { url, returnType = "html", waitFor, timeout = 30000, headers, userAgent, maxLength } = request.params.arguments as {
             url: string;
             returnType?: "html" | "text" | "markdown" | "json";
             waitFor?: string;
             timeout?: number;
             headers?: Record<string, string>;
             userAgent?: string;
+            maxLength?: number;
           };
 
           const result = await this.steelAPI.scrapeWithBrowser({
@@ -96,6 +102,7 @@ class SteelScraperServer {
             timeout,
             headers,
             userAgent,
+            maxLength,
           });
 
           // Create a more model-friendly response structure
@@ -109,7 +116,7 @@ Method: ${result.metadata?.method} (stealth browser, anti-detection)
 Return Type: ${result.metadata?.returnType}
 Status Code: ${result.statusCode}
 Processing Time: ${result.metadata?.processingTime}ms
-Content Length: ${result.metadata?.contentLength} characters
+Content Length: ${result.metadata?.contentLength} characters${result.metadata?.truncated ? ` (truncated to ${result.metadata?.returnedLength} characters)` : ''}
 Content Type: ${result.metadata?.contentType}
 Timestamp: ${result.metadata?.timestamp}
 

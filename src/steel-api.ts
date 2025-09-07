@@ -5,6 +5,7 @@ export interface ScrapeOptions {
   timeout?: number;
   headers?: Record<string, string>;
   userAgent?: string;
+  maxLength?: number;
 }
 
 export interface ScrapeResult {
@@ -19,8 +20,10 @@ export interface ScrapeResult {
     returnType: string;
     processingTime?: number;
     contentLength?: number;
+    returnedLength?: number;
     contentType?: string;
     method?: string;
+    truncated?: boolean;
   };
 }
 
@@ -40,6 +43,7 @@ export class SteelAPI {
       timeout = 30000,
       headers,
       userAgent,
+      maxLength,
     } = options;
 
     try {
@@ -82,9 +86,17 @@ export class SteelAPI {
       }
 
       const scrapedData = responseData.data || responseData.content || responseData;
+      let finalData = typeof scrapedData === 'string' ? scrapedData : JSON.stringify(scrapedData);
+      const originalLength = finalData.length;
+      
+      // Truncate if maxLength is specified and content exceeds it
+      if (maxLength && finalData.length > maxLength) {
+        finalData = finalData.substring(0, maxLength) + `\n\n[CONTENT TRUNCATED: ${originalLength} characters total, showing first ${maxLength} characters]`;
+      }
+      
       return {
         success: true,
-        data: typeof scrapedData === 'string' ? scrapedData : JSON.stringify(scrapedData),
+        data: finalData,
         statusCode: response.status,
         headers: Object.fromEntries(response.headers.entries()),
         metadata: {
@@ -92,9 +104,11 @@ export class SteelAPI {
           timestamp: new Date().toISOString(),
           returnType,
           processingTime: responseData.processingTime,
-          contentLength: typeof scrapedData === 'string' ? scrapedData.length : JSON.stringify(scrapedData).length,
+          contentLength: originalLength,
+          returnedLength: finalData.length,
           contentType: response.headers.get('content-type') || 'unknown',
           method: 'full-browser-automation',
+          truncated: maxLength ? originalLength > maxLength : false,
         },
       };
     } catch (error) {
