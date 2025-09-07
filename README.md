@@ -8,6 +8,7 @@ A simple Model Context Protocol (MCP) server that wraps the steel-dev API for we
 - **Flexible Return Types**: HTML, text, markdown, or JSON
 - **Local/Remote Support**: Works with local or remote steel-dev instances
 - **Browser Automation**: Wait for elements, custom headers, user agents
+- **Context Overflow Prevention**: Configurable `maxLength` parameter to limit content size
 - **TypeScript**: Fully typed implementation
 
 ## Installation
@@ -145,11 +146,12 @@ The server provides one tool: `scrape_with_browser`
 #### Parameters
 
 - `url` (required): The URL to scrape
-- `returnType` (optional): Return format - `"html"`, `"text"`, `"markdown"`, or `"json"` (default: `"html"`)
+- `returnType` (optional): Return format - `"html"`, `"text"`, `"markdown"`, or `"json"` (default: `"text"`)
 - `waitFor` (optional): CSS selector to wait for before scraping
 - `timeout` (optional): Timeout in milliseconds (default: `30000`)
 - `headers` (optional): Custom headers to send with the request
 - `userAgent` (optional): Custom user agent string
+- `maxLength` (optional): Maximum characters to return (default: no limit). Use to prevent context overflow in large pages
 
 #### Example Usage
 
@@ -171,6 +173,16 @@ The server provides one tool: `scrape_with_browser`
     "waitFor": ".content",
     "timeout": 60000,
     "userAgent": "Mozilla/5.0 (Custom Bot)"
+  }
+}
+
+// Scraping with content length limit (prevents context overflow)
+{
+  "tool": "scrape_with_browser",
+  "arguments": {
+    "url": "https://en.wikipedia.org/wiki/Long_Article",
+    "returnType": "text",
+    "maxLength": 2000
   }
 }
 ```
