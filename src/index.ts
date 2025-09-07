@@ -38,36 +38,36 @@ class SteelScraperServer {
         tools: [
           {
             name: "scrape_with_browser",
-            description: "Scrape a website using steel-dev API with browser automation",
+            description: "Scrape any website using browser automation. Returns the full page content in your chosen format. Use 'text' for clean text, 'html' for raw HTML, 'markdown' for formatted markdown, or 'json' for structured data.",
             inputSchema: {
               type: "object",
               properties: {
                 url: {
                   type: "string",
-                  description: "The URL to scrape",
+                  description: "The complete URL to scrape (must include http:// or https://)",
                 },
                 returnType: {
                   type: "string",
                   enum: ["html", "text", "markdown", "json"],
-                  description: "The format to return the scraped content",
-                  default: "html",
+                  description: "Content format: 'text'=clean text, 'html'=raw HTML, 'markdown'=formatted, 'json'=structured data",
+                  default: "text",
                 },
                 waitFor: {
                   type: "string",
-                  description: "CSS selector to wait for before scraping (optional)",
+                  description: "Optional CSS selector to wait for before scraping (e.g., '.content', '#main')",
                 },
                 timeout: {
                   type: "number",
-                  description: "Timeout in milliseconds (optional, default: 30000)",
+                  description: "Maximum wait time in milliseconds (default: 30000 = 30 seconds)",
                   default: 30000,
                 },
                 headers: {
                   type: "object",
-                  description: "Custom headers to send with the request (optional)",
+                  description: "Optional custom HTTP headers as key-value pairs",
                 },
                 userAgent: {
                   type: "string",
-                  description: "Custom user agent string (optional)",
+                  description: "Optional custom user agent string",
                 },
               },
               required: ["url"],
@@ -98,14 +98,39 @@ class SteelScraperServer {
             userAgent,
           });
 
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(result, null, 2),
-              },
-            ],
-          };
+          // Create a more model-friendly response structure
+          if (result.success) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `SUCCESS: Successfully scraped ${result.metadata?.url}
+Return Type: ${result.metadata?.returnType}
+Status Code: ${result.statusCode}
+Processing Time: ${result.metadata?.processingTime}ms
+Content Length: ${result.metadata?.contentLength} characters
+Content Type: ${result.metadata?.contentType}
+Timestamp: ${result.metadata?.timestamp}
+
+SCRAPED CONTENT:
+${result.data}`,
+                },
+              ],
+            };
+          } else {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `ERROR: Failed to scrape ${result.metadata?.url || 'unknown URL'}
+Error: ${result.error}
+Status Code: ${result.statusCode || 'unknown'}
+Timestamp: ${result.metadata?.timestamp || new Date().toISOString()}`,
+                },
+              ],
+              isError: true,
+            };
+          }
         } catch (error) {
           return {
             content: [

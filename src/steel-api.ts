@@ -18,6 +18,8 @@ export interface ScrapeResult {
     timestamp: string;
     returnType: string;
     processingTime?: number;
+    contentLength?: number;
+    contentType?: string;
   };
 }
 
@@ -78,9 +80,10 @@ export class SteelAPI {
         };
       }
 
+      const scrapedData = responseData.data || responseData.content || responseData;
       return {
         success: true,
-        data: responseData.data || responseData.content,
+        data: typeof scrapedData === 'string' ? scrapedData : JSON.stringify(scrapedData),
         statusCode: response.status,
         headers: Object.fromEntries(response.headers.entries()),
         metadata: {
@@ -88,6 +91,8 @@ export class SteelAPI {
           timestamp: new Date().toISOString(),
           returnType,
           processingTime: responseData.processingTime,
+          contentLength: typeof scrapedData === 'string' ? scrapedData.length : JSON.stringify(scrapedData).length,
+          contentType: response.headers.get('content-type') || 'unknown',
         },
       };
     } catch (error) {
