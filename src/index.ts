@@ -37,8 +37,8 @@ class SteelScraperServer {
       return {
         tools: [
           {
-            name: "scrape_with_browser",
-            description: "Scrape any website using full browser automation (stealth mode, anti-detection). Returns page content in your chosen format: 'html' for raw HTML source, 'markdown' for clean formatted text (recommended for reading), 'text' for plain text with HTML removed, or 'json' for structured data. Automatically handles JavaScript rendering and provides clean output by default.",
+            name: "visit_with_browser",
+            description: "Visit any website using full browser automation (stealth mode, anti-detection). Returns page content in your chosen format: 'html' for raw HTML source, 'markdown' for clean formatted text (recommended for reading), 'text' for plain text with HTML removed, or 'json' for structured data. Automatically handles JavaScript rendering and provides clean output by default.",
             inputSchema: {
               type: "object",
               properties: {
@@ -88,7 +88,7 @@ class SteelScraperServer {
     });
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      if (request.params.name === "scrape_with_browser") {
+      if (request.params.name === "visit_with_browser") {
         try {
           const { url, returnType = "html", waitFor, timeout = 30000, headers, userAgent, maxLength, verboseMode } = request.params.arguments as {
             url: string;

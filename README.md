@@ -1,10 +1,10 @@
 # MCP Server Steel Scraper
 
-A simple Model Context Protocol (MCP) server that wraps the steel-dev API for web scraping with browser automation.
+A simple Model Context Protocol (MCP) server that wraps the steel-dev API for visiting websites with browser automation.
 
 ## Features
 
-- **Single Tool**: `scrape_with_browser` - Scrape websites using steel-dev API
+- **Single Tool**: `visit_with_browser` - Visit websites using steel-dev API
 - **Flexible Return Types**: HTML, text, markdown, or JSON
 - **Local/Remote Support**: Works with local or remote steel-dev instances
 - **Browser Automation**: Wait for elements, custom headers, user agents
@@ -143,33 +143,33 @@ Add this server to your MCP client configuration. Here are examples for popular 
 
 ### Tool Usage
 
-The server provides one tool: `scrape_with_browser`
+The server provides one tool: `visit_with_browser`
 
 #### Parameters
 
-- `url` (required): The URL to scrape
+- `url` (required): The URL to visit
 - `returnType` (optional): Return format - `"html"` for raw HTML source (may be very large), `"markdown"` for clean formatted text converted from HTML (may fail on complex pages), `"text"` for plain text with HTML removed (most reliable), or `"json"` for structured data (default: `"markdown"`)
-- `waitFor` (optional): CSS selector to wait for before scraping
+- `waitFor` (optional): CSS selector to wait for before extracting content
 - `timeout` (optional): Timeout in milliseconds (default: `30000`)
 - `headers` (optional): Custom headers to send with the request
 - `userAgent` (optional): Custom user agent string
 - `maxLength` (optional): Maximum characters to return. Smart defaults: markdown=8000, text=10000, html=15000, json=5000. For markdown, automatically reserves space for metadata
-- `verboseMode` (optional): Return full metadata instead of clean content-focused output (default: false). Use when you need detailed scraping information
+- `verboseMode` (optional): Return full metadata instead of clean content-focused output (default: false). Use when you need detailed visit information
 
 #### Example Usage
 
 ```javascript
-// Basic scraping
+// Basic website visit
 {
-  "tool": "scrape_with_browser",
+  "tool": "visit_with_browser",
   "arguments": {
     "url": "https://example.com"
   }
 }
 
-// Advanced scraping with options
+// Advanced visit with options
 {
-  "tool": "scrape_with_browser",
+  "tool": "visit_with_browser",
   "arguments": {
     "url": "https://example.com",
     "returnType": "markdown",
@@ -179,9 +179,9 @@ The server provides one tool: `scrape_with_browser`
   }
 }
 
-// Simple scraping with smart defaults (perfect for 7B models)
+// Simple visit with smart defaults (perfect for 7B models)
 {
-  "tool": "scrape_with_browser",
+  "tool": "visit_with_browser",
   "arguments": {
     "url": "https://example.com",
     "returnType": "markdown"
@@ -190,7 +190,7 @@ The server provides one tool: `scrape_with_browser`
 
 // Custom length limit (automatically handles content vs metadata split)
 {
-  "tool": "scrape_with_browser",
+  "tool": "visit_with_browser",
   "arguments": {
     "url": "https://en.wikipedia.org/wiki/Long_Article",
     "returnType": "markdown",
@@ -198,9 +198,9 @@ The server provides one tool: `scrape_with_browser`
   }
 }
 
-// Verbose mode when you need detailed scraping information
+// Verbose mode when you need detailed visit information
 {
-  "tool": "scrape_with_browser",
+  "tool": "visit_with_browser",
   "arguments": {
     "url": "https://example.com",
     "returnType": "markdown",
@@ -249,7 +249,7 @@ For large, complex pages like Amazon.com, follow these best practices:
 ### Recommended Approach for Complex Pages
 ```javascript
 {
-  "tool": "scrape_with_browser",
+  "tool": "visit_with_browser",
   "arguments": {
     "url": "https://www.amazon.com",
     "returnType": "text",      // Most reliable for complex pages
@@ -283,10 +283,13 @@ For large, complex pages like Amazon.com, follow these best practices:
 Use `waitFor` parameter to wait for specific elements to load:
 ```javascript
 {
-  "url": "https://www.amazon.com",
-  "returnType": "markdown",
-  "waitFor": ".s-main-slot",  // Wait for main content
-  "timeout": 60000            // Longer timeout for complex pages
+  "tool": "visit_with_browser",
+  "arguments": {
+    "url": "https://www.amazon.com",
+    "returnType": "markdown",
+    "waitFor": ".s-main-slot",  // Wait for main content
+    "timeout": 60000            // Longer timeout for complex pages
+  }
 }
 ```
 
@@ -335,7 +338,7 @@ For summarization tasks, use the default clean output:
 
 ```javascript
 {
-  "tool": "scrape_with_browser",
+  "tool": "visit_with_browser",
   "arguments": {
     "url": "https://article-to-summarize.com",
     "returnType": "markdown",
