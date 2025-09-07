@@ -20,6 +20,7 @@ export interface ScrapeResult {
     processingTime?: number;
     contentLength?: number;
     contentType?: string;
+    method?: string;
   };
 }
 
@@ -93,6 +94,7 @@ export class SteelAPI {
           processingTime: responseData.processingTime,
           contentLength: typeof scrapedData === 'string' ? scrapedData.length : JSON.stringify(scrapedData).length,
           contentType: response.headers.get('content-type') || 'unknown',
+          method: 'full-browser-automation',
         },
       };
     } catch (error) {

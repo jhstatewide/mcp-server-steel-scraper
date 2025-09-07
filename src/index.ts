@@ -38,7 +38,7 @@ class SteelScraperServer {
         tools: [
           {
             name: "scrape_with_browser",
-            description: "Scrape any website using browser automation. Returns the full page content in your chosen format. Use 'text' for clean text, 'html' for raw HTML, 'markdown' for formatted markdown, or 'json' for structured data.",
+            description: "Scrape any website using full browser automation (stealth mode, anti-detection). Returns the full page content in your chosen format. Use 'text' for clean text, 'html' for raw HTML, 'markdown' for formatted markdown, or 'json' for structured data.",
             inputSchema: {
               type: "object",
               properties: {
@@ -105,6 +105,7 @@ class SteelScraperServer {
                 {
                   type: "text",
                   text: `SUCCESS: Successfully scraped ${result.metadata?.url}
+Method: ${result.metadata?.method} (stealth browser, anti-detection)
 Return Type: ${result.metadata?.returnType}
 Status Code: ${result.statusCode}
 Processing Time: ${result.metadata?.processingTime}ms
