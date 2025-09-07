@@ -73,6 +73,9 @@ export class SteelAPI {
     // Apply smart defaults if no maxLength specified
     const effectiveMaxLength = maxLength || this.getSmartDefaults(returnType);
     const contentLength = this.calculateContentLength(effectiveMaxLength, returnType, verboseMode);
+    
+    // Debug logging
+    console.log(`[SteelAPI] Scraping ${url} with returnType=${returnType}, maxLength=${maxLength}, effectiveMaxLength=${effectiveMaxLength}, contentLength=${contentLength}`);
 
     try {
       // Prepare the request payload
@@ -80,7 +83,7 @@ export class SteelAPI {
         url,
         returnType,
         timeout,
-        maxLength: contentLength,
+        maxLength: effectiveMaxLength, // Send the total length limit to steel-dev API
       };
 
       if (waitFor) {
@@ -118,14 +121,23 @@ export class SteelAPI {
       let finalData = typeof scrapedData === 'string' ? scrapedData : JSON.stringify(scrapedData);
       const originalLength = finalData.length;
       
+      // Debug logging
+      console.log(`[SteelAPI] Received ${originalLength} characters from steel-dev API, requested ${contentLength}`);
+      
       // Check for markdown conversion issues and collect warnings
       const warnings: string[] = [];
       if (returnType === "markdown") {
         // Detect if we got HTML instead of markdown (common conversion failure)
-        if (finalData.includes('<html') || finalData.includes('<!DOCTYPE') || finalData.includes('<head>')) {
-          const warning = `Markdown conversion may have failed - received HTML content instead of markdown`;
+        const hasHtmlTags = finalData.includes('<html') || finalData.includes('<!DOCTYPE') || finalData.includes('<head>') || 
+                           finalData.includes('<div') || finalData.includes('<span') || finalData.includes('<script');
+        const hasMarkdownSyntax = finalData.includes('# ') || finalData.includes('## ') || finalData.includes('* ') || 
+                                 finalData.includes('- ') || finalData.includes('[') && finalData.includes('](');
+        
+        if (hasHtmlTags && !hasMarkdownSyntax) {
+          const warning = `Markdown conversion failed - received HTML content instead of markdown. The steel-dev API may not support markdown conversion for this page type. Try using returnType='text' for a simpler text extraction.`;
           warnings.push(warning);
           console.warn(`${warning} for ${url}`);
+          console.warn(`[SteelAPI] HTML detected: ${hasHtmlTags}, Markdown detected: ${hasMarkdownSyntax}`);
         }
         
         // Check for truncated markdown that might be incomplete
@@ -149,7 +161,10 @@ export class SteelAPI {
       
       // Apply final truncation if content exceeds the effective max length
       if (finalData.length > effectiveMaxLength) {
+        console.log(`[SteelAPI] Truncating content from ${finalData.length} to ${effectiveMaxLength} characters`);
         finalData = finalData.substring(0, effectiveMaxLength) + `\n\n[CONTENT TRUNCATED: ${originalLength} characters total, showing first ${effectiveMaxLength} characters]`;
+      } else {
+        console.log(`[SteelAPI] Content length ${finalData.length} is within limit ${effectiveMaxLength}`);
       }
       
       return {

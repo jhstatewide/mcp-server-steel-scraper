@@ -148,7 +148,7 @@ The server provides one tool: `scrape_with_browser`
 #### Parameters
 
 - `url` (required): The URL to scrape
-- `returnType` (optional): Return format - `"html"`, `"text"`, `"markdown"`, or `"json"` (default: `"text"`)
+- `returnType` (optional): Return format - `"html"` for raw HTML source (may be very large), `"markdown"` for clean formatted text converted from HTML (may fail on complex pages), `"text"` for plain text with HTML removed (most reliable), or `"json"` for structured data (default: `"markdown"`)
 - `waitFor` (optional): CSS selector to wait for before scraping
 - `timeout` (optional): Timeout in milliseconds (default: `30000`)
 - `headers` (optional): Custom headers to send with the request
@@ -241,6 +241,54 @@ The server automatically handles content length optimization:
 ```
 
 This approach ensures you get complete, properly formatted content while maintaining simple, intuitive parameter management.
+
+## Handling Large Pages (Like Amazon)
+
+For large, complex pages like Amazon.com, follow these best practices:
+
+### Recommended Approach for Complex Pages
+```javascript
+{
+  "tool": "scrape_with_browser",
+  "arguments": {
+    "url": "https://www.amazon.com",
+    "returnType": "text",      // Most reliable for complex pages
+    "maxLength": 5000,         // Reasonable limit for large pages
+    "waitFor": ".s-main-slot"  // Wait for main content to load
+  }
+}
+```
+
+### ReturnType Comparison for Large Pages
+- **HTML**: Returns raw HTML source (can be 900,000+ characters for Amazon)
+- **Text**: Plain text with HTML removed (most reliable, good for complex pages)
+- **Markdown**: Converts HTML to clean, readable text (may fail on complex pages like Amazon)
+- **JSON**: Structured data (limited extraction capabilities)
+
+**Note**: Markdown conversion may fail on complex, JavaScript-heavy pages like Amazon. Use `"text"` for the most reliable results.
+
+### Troubleshooting
+
+**If you get HTML instead of Markdown:**
+- The steel-dev API may not support markdown conversion for that page type
+- Try using `returnType: "text"` instead for plain text extraction
+- Complex pages with heavy JavaScript may not convert properly
+
+**If you get truncated content:**
+- The page may be too large for the specified `maxLength`
+- Try increasing `maxLength` or using a more specific `waitFor` selector
+- Consider using `returnType: "text"` for more reliable truncation
+
+### For Dynamic Content
+Use `waitFor` parameter to wait for specific elements to load:
+```javascript
+{
+  "url": "https://www.amazon.com",
+  "returnType": "markdown",
+  "waitFor": ".s-main-slot",  // Wait for main content
+  "timeout": 60000            // Longer timeout for complex pages
+}
+```
 
 ## Clean Output by Default
 

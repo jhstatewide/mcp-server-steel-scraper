@@ -38,7 +38,7 @@ class SteelScraperServer {
         tools: [
           {
             name: "scrape_with_browser",
-            description: "Scrape any website using full browser automation (stealth mode, anti-detection). Returns the full page content in your chosen format. Use 'text' for clean text, 'html' for raw HTML, 'markdown' for formatted markdown, or 'json' for structured data.",
+            description: "Scrape any website using full browser automation (stealth mode, anti-detection). Returns page content in your chosen format: 'html' for raw HTML source, 'markdown' for clean formatted text (recommended for reading), 'text' for plain text with HTML removed, or 'json' for structured data. Automatically handles JavaScript rendering and provides clean output by default.",
             inputSchema: {
               type: "object",
               properties: {
@@ -49,8 +49,8 @@ class SteelScraperServer {
                 returnType: {
                   type: "string",
                   enum: ["html", "text", "markdown", "json"],
-                  description: "Content format: 'text'=clean text, 'html'=raw HTML, 'markdown'=formatted, 'json'=structured data",
-                  default: "text",
+                  description: "Content format: 'html'=raw HTML source (may be very large), 'markdown'=clean formatted text converted from HTML (recommended for reading), 'text'=plain text with HTML tags removed, 'json'=structured data extracted from page",
+                  default: "markdown",
                 },
                 waitFor: {
                   type: "string",
