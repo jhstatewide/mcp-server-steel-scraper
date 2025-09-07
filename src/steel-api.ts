@@ -6,6 +6,7 @@ export interface ScrapeOptions {
   headers?: Record<string, string>;
   userAgent?: string;
   maxLength?: number;
+  verboseMode?: boolean;
 }
 
 export interface ScrapeResult {
@@ -24,6 +25,8 @@ export interface ScrapeResult {
     contentType?: string;
     method?: string;
     truncated?: boolean;
+    warnings?: string[];
+    verboseMode?: boolean;
   };
 }
 
@@ -35,6 +38,26 @@ export class SteelAPI {
     this.baseUrl = baseUrl.replace(/\/$/, "");
   }
 
+  private getSmartDefaults(returnType: string): number {
+    switch (returnType) {
+      case "markdown": return 8000;
+      case "text": return 10000;
+      case "html": return 15000;
+      case "json": return 5000;
+      default: return 8000;
+    }
+  }
+
+  private calculateContentLength(maxLength: number, returnType: string, verboseMode: boolean): number {
+    if (returnType === "markdown") {
+      // For markdown, reserve space for metadata
+      const metadataReserve = verboseMode ? 0.15 : 0.1; // 15% for verbose, 10% for clean
+      return Math.floor(maxLength * (1 - metadataReserve));
+    }
+    // For other types, use full length for content
+    return maxLength;
+  }
+
   async scrapeWithBrowser(options: ScrapeOptions): Promise<ScrapeResult> {
     const {
       url,
@@ -44,7 +67,12 @@ export class SteelAPI {
       headers,
       userAgent,
       maxLength,
+      verboseMode = false,
     } = options;
+
+    // Apply smart defaults if no maxLength specified
+    const effectiveMaxLength = maxLength || this.getSmartDefaults(returnType);
+    const contentLength = this.calculateContentLength(effectiveMaxLength, returnType, verboseMode);
 
     try {
       // Prepare the request payload
@@ -52,6 +80,7 @@ export class SteelAPI {
         url,
         returnType,
         timeout,
+        maxLength: contentLength,
       };
 
       if (waitFor) {
@@ -89,9 +118,38 @@ export class SteelAPI {
       let finalData = typeof scrapedData === 'string' ? scrapedData : JSON.stringify(scrapedData);
       const originalLength = finalData.length;
       
-      // Truncate if maxLength is specified and content exceeds it
-      if (maxLength && finalData.length > maxLength) {
-        finalData = finalData.substring(0, maxLength) + `\n\n[CONTENT TRUNCATED: ${originalLength} characters total, showing first ${maxLength} characters]`;
+      // Check for markdown conversion issues and collect warnings
+      const warnings: string[] = [];
+      if (returnType === "markdown") {
+        // Detect if we got HTML instead of markdown (common conversion failure)
+        if (finalData.includes('<html') || finalData.includes('<!DOCTYPE') || finalData.includes('<head>')) {
+          const warning = `Markdown conversion may have failed - received HTML content instead of markdown`;
+          warnings.push(warning);
+          console.warn(`${warning} for ${url}`);
+        }
+        
+        // Check for truncated markdown that might be incomplete
+        if (finalData.length > 0 && !finalData.trim().endsWith('.') && !finalData.trim().endsWith('!') && !finalData.trim().endsWith('?') && !finalData.trim().endsWith(']')) {
+          // This is a heuristic - if content doesn't end with typical sentence endings or markdown elements,
+          // it might be truncated mid-sentence
+          if (finalData.length >= contentLength * 0.95) {
+            const warning = `Markdown content may be truncated mid-sentence`;
+            warnings.push(warning);
+            console.warn(`${warning} for ${url}`);
+          }
+        }
+        
+        // Check for very short markdown content that might indicate conversion issues
+        if (finalData.length < 100 && originalLength > 1000) {
+          const warning = `Markdown content is unusually short compared to original content - conversion may have failed`;
+          warnings.push(warning);
+          console.warn(`${warning} for ${url}`);
+        }
+      }
+      
+      // Apply final truncation if content exceeds the effective max length
+      if (finalData.length > effectiveMaxLength) {
+        finalData = finalData.substring(0, effectiveMaxLength) + `\n\n[CONTENT TRUNCATED: ${originalLength} characters total, showing first ${effectiveMaxLength} characters]`;
       }
       
       return {
@@ -108,7 +166,9 @@ export class SteelAPI {
           returnedLength: finalData.length,
           contentType: response.headers.get('content-type') || 'unknown',
           method: 'full-browser-automation',
-          truncated: maxLength ? originalLength > maxLength : false,
+          truncated: originalLength > effectiveMaxLength,
+          warnings: warnings.length > 0 ? warnings : undefined,
+          verboseMode,
         },
       };
     } catch (error) {

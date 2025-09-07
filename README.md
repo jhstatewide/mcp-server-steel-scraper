@@ -8,7 +8,9 @@ A simple Model Context Protocol (MCP) server that wraps the steel-dev API for we
 - **Flexible Return Types**: HTML, text, markdown, or JSON
 - **Local/Remote Support**: Works with local or remote steel-dev instances
 - **Browser Automation**: Wait for elements, custom headers, user agents
-- **Context Overflow Prevention**: Configurable `maxLength` parameter to limit content size
+- **Smart Length Management**: Single `maxLength` parameter with intelligent defaults and automatic content/metadata split
+- **Clean Output by Default**: Minimal metadata output perfect for 7B models and summarization
+- **Verbose Mode**: Optional full metadata when detailed information is needed
 - **TypeScript**: Fully typed implementation
 
 ## Installation
@@ -151,7 +153,8 @@ The server provides one tool: `scrape_with_browser`
 - `timeout` (optional): Timeout in milliseconds (default: `30000`)
 - `headers` (optional): Custom headers to send with the request
 - `userAgent` (optional): Custom user agent string
-- `maxLength` (optional): Maximum characters to return (default: no limit). Use to prevent context overflow in large pages
+- `maxLength` (optional): Maximum characters to return. Smart defaults: markdown=8000, text=10000, html=15000, json=5000. For markdown, automatically reserves space for metadata
+- `verboseMode` (optional): Return full metadata instead of clean content-focused output (default: false). Use when you need detailed scraping information
 
 #### Example Usage
 
@@ -176,13 +179,119 @@ The server provides one tool: `scrape_with_browser`
   }
 }
 
-// Scraping with content length limit (prevents context overflow)
+// Simple scraping with smart defaults (perfect for 7B models)
+{
+  "tool": "scrape_with_browser",
+  "arguments": {
+    "url": "https://example.com",
+    "returnType": "markdown"
+  }
+}
+
+// Custom length limit (automatically handles content vs metadata split)
 {
   "tool": "scrape_with_browser",
   "arguments": {
     "url": "https://en.wikipedia.org/wiki/Long_Article",
-    "returnType": "text",
-    "maxLength": 2000
+    "returnType": "markdown",
+    "maxLength": 5000
+  }
+}
+
+// Verbose mode when you need detailed scraping information
+{
+  "tool": "scrape_with_browser",
+  "arguments": {
+    "url": "https://example.com",
+    "returnType": "markdown",
+    "maxLength": 8000,
+    "verboseMode": true
+  }
+}
+```
+
+## Smart Length Management
+
+The server automatically handles content length optimization:
+
+- **Unified Length Control**: Single `maxLength` parameter handles both content and metadata
+- **Automatic Content/Metadata Split**: For markdown, reserves 10% for metadata, uses 90% for content
+- **Smart Defaults**: Reasonable defaults when no length is specified (markdown=8000, text=10000, html=15000, json=5000)
+- **Better Truncation**: Avoids double-truncation issues that could result in incomplete content
+- **Conversion Detection**: Automatically detects when HTML-to-markdown conversion may have failed
+- **Warning System**: Provides warnings when content appears truncated or incomplete
+
+### How It Works
+
+```javascript
+// Simple usage - uses smart defaults
+{
+  "url": "https://example.com",
+  "returnType": "markdown"
+  // Automatically uses 8000 characters, reserves 800 for metadata, 7200 for content
+}
+
+// Custom length - automatically splits appropriately
+{
+  "url": "https://example.com", 
+  "returnType": "markdown",
+  "maxLength": 5000
+  // Uses 5000 total, reserves 500 for metadata, 4500 for content
+}
+```
+
+This approach ensures you get complete, properly formatted content while maintaining simple, intuitive parameter management.
+
+## Clean Output by Default
+
+The server is designed with 7B models in mind, providing clean, content-focused output by default:
+
+- **Content Summarization**: Perfect for weaker models that need to summarize web content
+- **Content Analysis**: Ideal for processing large amounts of text
+- **Context Optimization**: Maximizes the content-to-metadata ratio automatically
+
+### How It Works
+
+**Default Mode** (clean output):
+```
+# Article Title
+This is the actual content...
+```
+
+**Verbose Mode** (`verboseMode: true`):
+```
+SUCCESS: Successfully scraped https://example.com
+Method: full-browser-automation (stealth browser, anti-detection)
+Return Type: markdown
+Status Code: 200
+Processing Time: 1250ms
+Content Length: 5000 characters
+Content Type: text/html
+Timestamp: 2024-01-15T10:30:00.000Z
+
+SCRAPED CONTENT:
+# Article Title
+This is the actual content...
+```
+
+### Benefits of Clean Output
+
+- **Maximum Content Space**: Removes ~200-300 characters of metadata overhead
+- **Cleaner Output**: Direct content without verbose headers
+- **Better for 7B Models**: Focuses the model's attention on the actual content
+- **Preserves Warnings**: Still shows important warnings if conversion issues occur
+
+### Recommended Usage
+
+For summarization tasks, use the default clean output:
+
+```javascript
+{
+  "tool": "scrape_with_browser",
+  "arguments": {
+    "url": "https://article-to-summarize.com",
+    "returnType": "markdown",
+    "maxLength": 10000  // Automatically optimizes content vs metadata split
   }
 }
 ```
