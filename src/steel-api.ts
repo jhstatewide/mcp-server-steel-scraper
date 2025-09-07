@@ -60,7 +60,7 @@ export class SteelAPI {
       }
 
       // Make the request to steel-dev API
-      const response = await fetch(`${this.baseUrl}/scrape`, {
+      const response = await fetch(`${this.baseUrl}/v1/scrape`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
