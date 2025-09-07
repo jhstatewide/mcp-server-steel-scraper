@@ -38,7 +38,7 @@ class SteelScraperServer {
         tools: [
           {
             name: "visit_with_browser",
-            description: "Visit any website using full browser automation (stealth mode, anti-detection). Returns page content in your chosen format: 'html' for raw HTML source, 'markdown' for clean formatted text (recommended for reading), 'text' for plain text with HTML removed, or 'json' for structured data. Automatically handles JavaScript rendering and provides clean output by default.",
+            description: "Visit any website using full browser automation (stealth mode, anti-detection). Returns page content in your chosen format: 'html' for raw HTML source, 'markdown' for clean formatted text (recommended for reading), 'readability' for Mozilla Readability format, or 'cleaned_html' for cleaned HTML. Supports screenshot and PDF generation. Automatically handles JavaScript rendering and provides clean output by default.",
             inputSchema: {
               type: "object",
               properties: {
@@ -46,32 +46,41 @@ class SteelScraperServer {
                   type: "string",
                   description: "The complete URL to scrape (must include http:// or https://)",
                 },
-                returnType: {
-                  type: "string",
-                  enum: ["html", "text", "markdown", "json"],
-                  description: "Content format: 'html'=raw HTML source (may be very large), 'markdown'=clean formatted text converted from HTML (recommended for reading), 'text'=plain text with HTML tags removed, 'json'=structured data extracted from page",
-                  default: "markdown",
+                format: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                    enum: ["html", "readability", "cleaned_html", "markdown"],
+                  },
+                  description: "Content formats to extract: 'html'=raw HTML source (may be very large), 'markdown'=clean formatted text converted from HTML (recommended for reading), 'readability'=Mozilla Readability format, 'cleaned_html'=cleaned HTML. You can request multiple formats.",
+                  default: ["markdown"],
                 },
-                waitFor: {
-                  type: "string",
-                  description: "Optional CSS selector to wait for before scraping (e.g., '.content', '#main')",
+                screenshot: {
+                  type: "boolean",
+                  description: "Take a screenshot of the page (returns base64 encoded image)",
+                  default: false,
                 },
-                timeout: {
+                pdf: {
+                  type: "boolean",
+                  description: "Generate a PDF of the page (returns base64 encoded PDF)",
+                  default: false,
+                },
+                proxyUrl: {
+                  type: "string",
+                  description: "Proxy URL to use for the request (e.g., 'http://proxy:port')",
+                },
+                delay: {
                   type: "number",
-                  description: "Maximum wait time in milliseconds (default: 30000 = 30 seconds)",
-                  default: 30000,
+                  description: "Delay in seconds to wait after page load before scraping",
+                  default: 0,
                 },
-                headers: {
-                  type: "object",
-                  description: "Optional custom HTTP headers as key-value pairs",
-                },
-                userAgent: {
+                logUrl: {
                   type: "string",
-                  description: "Optional custom user agent string",
+                  description: "URL to send logs to for debugging purposes",
                 },
                 maxLength: {
                   type: "number",
-                  description: "Maximum characters to return (optional). Smart defaults: markdown=8000, text=10000, html=15000, json=5000. For markdown, automatically reserves space for metadata.",
+                  description: "Maximum characters to return (optional). Smart defaults: markdown=8000, readability=10000, html=15000, cleaned_html=12000. For markdown, automatically reserves space for metadata.",
                   default: null,
                 },
                 verboseMode: {
@@ -90,24 +99,26 @@ class SteelScraperServer {
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (request.params.name === "visit_with_browser") {
         try {
-          const { url, returnType = "html", waitFor, timeout = 30000, headers, userAgent, maxLength, verboseMode } = request.params.arguments as {
+          const { url, format = ["markdown"], screenshot = false, pdf = false, proxyUrl, delay = 0, logUrl, maxLength, verboseMode = false } = request.params.arguments as {
             url: string;
-            returnType?: "html" | "text" | "markdown" | "json";
-            waitFor?: string;
-            timeout?: number;
-            headers?: Record<string, string>;
-            userAgent?: string;
+            format?: ("html" | "readability" | "cleaned_html" | "markdown")[];
+            screenshot?: boolean;
+            pdf?: boolean;
+            proxyUrl?: string;
+            delay?: number;
+            logUrl?: string;
             maxLength?: number;
             verboseMode?: boolean;
           };
 
           const result = await this.steelAPI.scrapeWithBrowser({
             url,
-            returnType,
-            waitFor,
-            timeout,
-            headers,
-            userAgent,
+            format,
+            screenshot,
+            pdf,
+            proxyUrl,
+            delay,
+            logUrl,
             maxLength,
             verboseMode,
           });
@@ -137,12 +148,12 @@ class SteelScraperServer {
                   type: "text",
                   text: `SUCCESS: Successfully scraped ${result.metadata?.url}
 Method: ${result.metadata?.method} (stealth browser, anti-detection)
-Return Type: ${result.metadata?.returnType}
+Format: ${result.metadata?.format?.join(', ')}
 Status Code: ${result.statusCode}
 Processing Time: ${result.metadata?.processingTime}ms
 Content Length: ${result.metadata?.contentLength} characters${result.metadata?.truncated ? ` (truncated to ${result.metadata?.returnedLength} characters)` : ''}${result.metadata?.warnings && result.metadata.warnings.length > 0 ? `\nWarnings: ${result.metadata.warnings.join('; ')}` : ''}
 Content Type: ${result.metadata?.contentType}
-Timestamp: ${result.metadata?.timestamp}
+Timestamp: ${result.metadata?.timestamp}${result.metadata?.title ? `\nTitle: ${result.metadata.title}` : ''}${result.metadata?.description ? `\nDescription: ${result.metadata.description}` : ''}${result.metadata?.language ? `\nLanguage: ${result.metadata.language}` : ''}${result.screenshot ? '\nScreenshot: Available (base64)' : ''}${result.pdf ? '\nPDF: Available (base64)' : ''}${result.links && result.links.length > 0 ? `\nLinks Found: ${result.links.length}` : ''}
 
 SCRAPED CONTENT:
 ${result.data}`,

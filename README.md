@@ -5,9 +5,9 @@ A simple Model Context Protocol (MCP) server that wraps the steel-dev API for vi
 ## Features
 
 - **Single Tool**: `visit_with_browser` - Visit websites using steel-dev API
-- **Flexible Return Types**: HTML, text, markdown, or JSON
+- **Flexible Return Types**: HTML, markdown, readability, or cleaned HTML
 - **Local/Remote Support**: Works with local or remote steel-dev instances
-- **Browser Automation**: Wait for elements, custom headers, user agents
+- **Browser Automation**: Screenshot capture, PDF generation, proxy support
 - **Smart Length Management**: Single `maxLength` parameter with intelligent defaults and automatic content/metadata split
 - **Clean Output by Default**: Minimal metadata output perfect for 7B models and summarization
 - **Verbose Mode**: Optional full metadata when detailed information is needed
@@ -148,12 +148,13 @@ The server provides one tool: `visit_with_browser`
 #### Parameters
 
 - `url` (required): The URL to visit
-- `returnType` (optional): Return format - `"html"` for raw HTML source (may be very large), `"markdown"` for clean formatted text converted from HTML (may fail on complex pages), `"text"` for plain text with HTML removed (most reliable), or `"json"` for structured data (default: `"markdown"`)
-- `waitFor` (optional): CSS selector to wait for before extracting content
-- `timeout` (optional): Timeout in milliseconds (default: `30000`)
-- `headers` (optional): Custom headers to send with the request
-- `userAgent` (optional): Custom user agent string
-- `maxLength` (optional): Maximum characters to return. Smart defaults: markdown=8000, text=10000, html=15000, json=5000. For markdown, automatically reserves space for metadata
+- `format` (optional): Content formats to extract - `["html"]` for raw HTML source (may be very large), `["markdown"]` for clean formatted text converted from HTML (recommended for reading), `["readability"]` for Mozilla Readability format, `["cleaned_html"]` for cleaned HTML. You can request multiple formats (default: `["markdown"]`)
+- `screenshot` (optional): Take a screenshot of the page (returns base64 encoded image) (default: `false`)
+- `pdf` (optional): Generate a PDF of the page (returns base64 encoded PDF) (default: `false`)
+- `proxyUrl` (optional): Proxy URL to use for the request (e.g., `"http://proxy:port"`)
+- `delay` (optional): Delay in seconds to wait after page load before scraping (default: `0`)
+- `logUrl` (optional): URL to send logs to for debugging purposes
+- `maxLength` (optional): Maximum characters to return. Smart defaults: markdown=8000, readability=10000, html=15000, cleaned_html=12000. For markdown, automatically reserves space for metadata
 - `verboseMode` (optional): Return full metadata instead of clean content-focused output (default: false). Use when you need detailed visit information
 
 #### Example Usage
@@ -167,15 +168,14 @@ The server provides one tool: `visit_with_browser`
   }
 }
 
-// Advanced visit with options
+// Advanced visit with multiple formats
 {
   "tool": "visit_with_browser",
   "arguments": {
     "url": "https://example.com",
-    "returnType": "markdown",
-    "waitFor": ".content",
-    "timeout": 60000,
-    "userAgent": "Mozilla/5.0 (Custom Bot)"
+    "format": ["markdown", "html"],
+    "screenshot": true,
+    "delay": 2
   }
 }
 
@@ -184,7 +184,7 @@ The server provides one tool: `visit_with_browser`
   "tool": "visit_with_browser",
   "arguments": {
     "url": "https://example.com",
-    "returnType": "markdown"
+    "format": ["markdown"]
   }
 }
 
@@ -193,7 +193,7 @@ The server provides one tool: `visit_with_browser`
   "tool": "visit_with_browser",
   "arguments": {
     "url": "https://en.wikipedia.org/wiki/Long_Article",
-    "returnType": "markdown",
+    "format": ["markdown"],
     "maxLength": 5000
   }
 }
@@ -203,9 +203,20 @@ The server provides one tool: `visit_with_browser`
   "tool": "visit_with_browser",
   "arguments": {
     "url": "https://example.com",
-    "returnType": "markdown",
+    "format": ["markdown"],
     "maxLength": 8000,
     "verboseMode": true
+  }
+}
+
+// With proxy and PDF generation
+{
+  "tool": "visit_with_browser",
+  "arguments": {
+    "url": "https://example.com",
+    "format": ["readability"],
+    "pdf": true,
+    "proxyUrl": "http://proxy:8080"
   }
 }
 ```
@@ -227,14 +238,14 @@ The server automatically handles content length optimization:
 // Simple usage - uses smart defaults
 {
   "url": "https://example.com",
-  "returnType": "markdown"
+  "format": ["markdown"]
   // Automatically uses 8000 characters, reserves 800 for metadata, 7200 for content
 }
 
 // Custom length - automatically splits appropriately
 {
   "url": "https://example.com", 
-  "returnType": "markdown",
+  "format": ["markdown"],
   "maxLength": 5000
   // Uses 5000 total, reserves 500 for metadata, 4500 for content
 }
@@ -252,43 +263,43 @@ For large, complex pages like Amazon.com, follow these best practices:
   "tool": "visit_with_browser",
   "arguments": {
     "url": "https://www.amazon.com",
-    "returnType": "text",      // Most reliable for complex pages
-    "maxLength": 5000,         // Reasonable limit for large pages
-    "waitFor": ".s-main-slot"  // Wait for main content to load
+    "format": ["readability"],  // Most reliable for complex pages
+    "maxLength": 5000,          // Reasonable limit for large pages
+    "delay": 3                  // Wait for main content to load
   }
 }
 ```
 
-### ReturnType Comparison for Large Pages
+### Format Comparison for Large Pages
 - **HTML**: Returns raw HTML source (can be 900,000+ characters for Amazon)
-- **Text**: Plain text with HTML removed (most reliable, good for complex pages)
+- **Readability**: Mozilla Readability format (most reliable, good for complex pages)
 - **Markdown**: Converts HTML to clean, readable text (may fail on complex pages like Amazon)
-- **JSON**: Structured data (limited extraction capabilities)
+- **Cleaned HTML**: Cleaned HTML with better structure
 
-**Note**: Markdown conversion may fail on complex, JavaScript-heavy pages like Amazon. Use `"text"` for the most reliable results.
+**Note**: Markdown conversion may fail on complex, JavaScript-heavy pages like Amazon. Use `["readability"]` for the most reliable results.
 
 ### Troubleshooting
 
 **If you get HTML instead of Markdown:**
 - The steel-dev API may not support markdown conversion for that page type
-- Try using `returnType: "text"` instead for plain text extraction
+- Try using `format: ["readability"]` instead for better text extraction
 - Complex pages with heavy JavaScript may not convert properly
 
 **If you get truncated content:**
 - The page may be too large for the specified `maxLength`
-- Try increasing `maxLength` or using a more specific `waitFor` selector
-- Consider using `returnType: "text"` for more reliable truncation
+- Try increasing `maxLength` or using a longer `delay`
+- Consider using `format: ["readability"]` for more reliable truncation
 
 ### For Dynamic Content
-Use `waitFor` parameter to wait for specific elements to load:
+Use `delay` parameter to wait for content to load:
 ```javascript
 {
   "tool": "visit_with_browser",
   "arguments": {
     "url": "https://www.amazon.com",
-    "returnType": "markdown",
-    "waitFor": ".s-main-slot",  // Wait for main content
-    "timeout": 60000            // Longer timeout for complex pages
+    "format": ["markdown"],
+    "delay": 5,                 // Wait 5 seconds for content to load
+    "maxLength": 10000          // Longer content for complex pages
   }
 }
 ```
@@ -313,12 +324,17 @@ This is the actual content...
 ```
 SUCCESS: Successfully scraped https://example.com
 Method: full-browser-automation (stealth browser, anti-detection)
-Return Type: markdown
+Format: markdown
 Status Code: 200
 Processing Time: 1250ms
 Content Length: 5000 characters
 Content Type: text/html
 Timestamp: 2024-01-15T10:30:00.000Z
+Title: Article Title
+Description: Article description
+Language: en
+Screenshot: Available (base64)
+Links Found: 15
 
 SCRAPED CONTENT:
 # Article Title
@@ -341,7 +357,7 @@ For summarization tasks, use the default clean output:
   "tool": "visit_with_browser",
   "arguments": {
     "url": "https://article-to-summarize.com",
-    "returnType": "markdown",
+    "format": ["markdown"],
     "maxLength": 10000  // Automatically optimizes content vs metadata split
   }
 }
@@ -360,13 +376,12 @@ This MCP server expects a steel-dev API instance running with the following endp
 ```json
 {
   "url": "https://example.com",
-  "returnType": "html",
-  "waitFor": ".content",
-  "timeout": 30000,
-  "headers": {
-    "Custom-Header": "value"
-  },
-  "userAgent": "Mozilla/5.0..."
+  "format": ["html", "markdown"],
+  "screenshot": true,
+  "pdf": false,
+  "proxyUrl": "http://proxy:8080",
+  "delay": 2,
+  "logUrl": "https://logs.example.com"
 }
 ```
 
@@ -374,8 +389,21 @@ This MCP server expects a steel-dev API instance running with the following endp
 
 ```json
 {
-  "data": "<html>...</html>",
-  "processingTime": 1500
+  "content": {
+    "html": "<html>...</html>",
+    "markdown": "# Title\nContent..."
+  },
+  "metadata": {
+    "title": "Page Title",
+    "description": "Page description",
+    "statusCode": 200,
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  },
+  "links": [
+    {"url": "https://example.com/link1", "text": "Link Text"}
+  ],
+  "screenshot": "base64...",
+  "pdf": "base64..."
 }
 ```
 
