@@ -6,7 +6,7 @@ A simple Model Context Protocol (MCP) server that wraps the steel-dev API for vi
 
 1. **Install the package:**
    ```bash
-   npm install -g @jharding/mcp-server-steel-scraper
+   npm install -g @jharding_npm/mcp-server-steel-scraper
    ```
 
 2. **Add to your MCP client configuration:**
@@ -15,7 +15,7 @@ A simple Model Context Protocol (MCP) server that wraps the steel-dev API for vi
      "mcpServers": {
        "steel-scraper": {
          "command": "npx",
-         "args": ["@jharding/mcp-server-steel-scraper"],
+         "args": ["@jharding_npm/mcp-server-steel-scraper"],
          "env": {
            "STEEL_API_URL": "http://localhost:3000"
          }
@@ -44,13 +44,13 @@ A simple Model Context Protocol (MCP) server that wraps the steel-dev API for vi
 Install the package globally to use it with npx:
 
 ```bash
-npm install -g @jharding/mcp-server-steel-scraper
+npm install -g @jharding_npm/mcp-server-steel-scraper
 ```
 
 Or use it directly with npx without installing:
 
 ```bash
-npx @jharding/mcp-server-steel-scraper
+npx @jharding_npm/mcp-server-steel-scraper
 ```
 
 ### Option 2: Local Development
@@ -108,7 +108,7 @@ Add this server to your MCP client configuration. Here are examples for popular 
   "mcpServers": {
     "steel-scraper": {
       "command": "npx",
-      "args": ["@jharding/mcp-server-steel-scraper"],
+      "args": ["@jharding_npm/mcp-server-steel-scraper"],
       "env": {
         "STEEL_API_URL": "http://localhost:3000"
       }
@@ -124,7 +124,7 @@ Add this server to your MCP client configuration. Here are examples for popular 
   "mcpServers": {
     "steel-scraper": {
       "command": "npx",
-      "args": ["@jharding/mcp-server-steel-scraper"],
+      "args": ["@jharding_npm/mcp-server-steel-scraper"],
       "env": {
         "STEEL_API_URL": "http://localhost:3000"
       }
@@ -140,7 +140,7 @@ Add this server to your MCP client configuration. Here are examples for popular 
   "mcpServers": {
     "steel-scraper": {
       "command": "npx",
-      "args": ["@jharding/mcp-server-steel-scraper"],
+      "args": ["@jharding_npm/mcp-server-steel-scraper"],
       "env": {
         "STEEL_API_URL": "http://localhost:3000"
       }
@@ -156,7 +156,7 @@ Add this server to your MCP client configuration. Here are examples for popular 
   "mcpServers": {
     "steel-scraper": {
       "command": "npx",
-      "args": ["@jharding/mcp-server-steel-scraper"],
+      "args": ["@jharding_npm/mcp-server-steel-scraper"],
       "env": {
         "STEEL_API_URL": "https://your-steel-dev-instance.com"
       }
@@ -167,7 +167,7 @@ Add this server to your MCP client configuration. Here are examples for popular 
 
 #### Alternative: Using Global Installation
 
-If you've installed the package globally with `npm install -g @jharding/mcp-server-steel-scraper`, you can use:
+If you've installed the package globally with `npm install -g @jharding_npm/mcp-server-steel-scraper`, you can use:
 
 ```json
 {
