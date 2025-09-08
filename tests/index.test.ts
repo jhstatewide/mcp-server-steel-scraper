@@ -1,7 +1,7 @@
-import { SteelErrorCode } from '../src/errors.js';
+import { SteelErrorCode } from '../src/errors';
 
 // Mock the SteelDevScraperService
-jest.mock('../src/steel-api.js', () => {
+jest.mock('../src/steel-api', () => {
   return {
     SteelDevScraperService: jest.fn().mockImplementation(() => {
       return {

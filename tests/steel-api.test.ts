@@ -1,5 +1,5 @@
-import { SteelDevScraperService, SteelAPI } from '../src/steel-api.js';
-import { SteelErrorCode } from '../src/errors.js';
+import { SteelDevScraperService, SteelAPI } from '../src/steel-api';
+import { SteelErrorCode } from '../src/errors';
 
 // Mock fetch for testing
 global.fetch = jest.fn();

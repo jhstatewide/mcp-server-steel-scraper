@@ -1,4 +1,4 @@
-import { SteelErrorCode, SteelDevError, createSteelError } from '../src/errors.js';
+import { SteelErrorCode, SteelDevError, createSteelError } from '../src/errors';
 
 describe('SteelDevError', () => {
   it('should create a SteelDevError with correct properties', () => {

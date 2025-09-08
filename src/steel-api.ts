@@ -11,7 +11,7 @@ export interface ScrapeOptions {
   verboseMode?: boolean;
 }
 
-import { SteelErrorCode, createSteelError } from './errors.js';
+import { SteelErrorCode, createSteelError } from './errors';
 
 export interface ScrapeResult {
   success: boolean;
