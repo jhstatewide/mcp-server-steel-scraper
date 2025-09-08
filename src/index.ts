@@ -6,14 +6,15 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { SteelAPI } from "./steel-api.js";
+import { SteelAPI, ISteelScraperService, SteelDevScraperService } from "./steel-api.js";
+import { SteelErrorCode } from "./errors.js";
 
 // Configuration
 const STEEL_API_URL = process.env.STEEL_API_URL || "http://localhost:3000";
 
 class SteelScraperServer {
   private server: Server;
-  private steelAPI: SteelAPI;
+  private steelScraperService: ISteelScraperService;
 
   constructor() {
     this.server = new Server(
@@ -28,7 +29,7 @@ class SteelScraperServer {
       }
     );
 
-    this.steelAPI = new SteelAPI(STEEL_API_URL);
+    this.steelScraperService = new SteelDevScraperService(STEEL_API_URL);
     this.setupHandlers();
   }
 
@@ -111,7 +112,7 @@ class SteelScraperServer {
             verboseMode?: boolean;
           };
 
-          const result = await this.steelAPI.scrapeWithBrowser({
+          const result = await this.steelScraperService.scrapeWithBrowser({
             url,
             format,
             screenshot,
@@ -163,37 +164,75 @@ ${result.data}`,
           } else {
             // Default: clean mode (minimal error info)
             if (!verboseMode) {
+              // For clean mode, provide minimal error information
+              let errorText = `ERROR: Failed to scrape ${result.metadata?.url || 'unknown URL'}`;
+              
+              // Include error code if available
+              if (result.errorCode) {
+                errorText += ` (${result.errorCode})`;
+              }
+              
+              // Include basic error message
+              if (result.error) {
+                errorText += `: ${result.error}`;
+              }
+              
               return {
                 content: [
                   {
                     type: "text",
-                    text: `ERROR: Failed to scrape ${result.metadata?.url || 'unknown URL'}: ${result.error}`,
+                    text: errorText,
                   },
                 ],
                 isError: true,
               };
             }
             
-            // Verbose mode: full error info
+            // Verbose mode: full error info including error code and metadata
+            let errorText = `ERROR: Failed to scrape ${result.metadata?.url || 'unknown URL'}\n`;
+            
+            // Include error code if available
+            if (result.errorCode) {
+              errorText += `Error Code: ${result.errorCode}\n`;
+            }
+            
+            // Include error message
+            if (result.error) {
+              errorText += `Error: ${result.error}\n`;
+            }
+            
+            // Include status code
+            errorText += `Status Code: ${result.statusCode || 'unknown'}\n`;
+            
+            // Include timestamp
+            errorText += `Timestamp: ${result.metadata?.timestamp || new Date().toISOString()}\n`;
+            
+            // Include error metadata if available
+            if (result.errorMetadata) {
+              errorText += `Error Metadata: ${JSON.stringify(result.errorMetadata, null, 2)}\n`;
+            }
+            
             return {
               content: [
                 {
                   type: "text",
-                  text: `ERROR: Failed to scrape ${result.metadata?.url || 'unknown URL'}
-Error: ${result.error}
-Status Code: ${result.statusCode || 'unknown'}
-Timestamp: ${result.metadata?.timestamp || new Date().toISOString()}`,
+                  text: errorText,
                 },
               ],
               isError: true,
             };
           }
         } catch (error) {
+          // Handle unexpected errors
+          const errorText = error instanceof Error ? error.message : String(error);
+          const errorCode = error instanceof Error && error.name === 'SteelDevError' ?
+            (error as any).code : SteelErrorCode.UNKNOWN_ERROR;
+          
           return {
             content: [
               {
                 type: "text",
-                text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+                text: `Unexpected Error: ${errorText} (${errorCode})`,
               },
             ],
             isError: true,
