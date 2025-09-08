@@ -2,6 +2,30 @@
 
 A simple Model Context Protocol (MCP) server that wraps the steel-dev API for visiting websites with browser automation.
 
+## Quick Start
+
+1. **Install the package:**
+   ```bash
+   npm install -g @jharding/mcp-server-steel-scraper
+   ```
+
+2. **Add to your MCP client configuration:**
+   ```json
+   {
+     "mcpServers": {
+       "steel-scraper": {
+         "command": "npx",
+         "args": ["@jharding/mcp-server-steel-scraper"],
+         "env": {
+           "STEEL_API_URL": "http://localhost:3000"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Start using the `visit_with_browser` tool in your MCP client!**
+
 ## Features
 
 - **Single Tool**: `visit_with_browser` - Visit websites using steel-dev API
@@ -14,6 +38,22 @@ A simple Model Context Protocol (MCP) server that wraps the steel-dev API for vi
 - **TypeScript**: Fully typed implementation
 
 ## Installation
+
+### Option 1: NPM Package (Recommended)
+
+Install the package globally to use it with npx:
+
+```bash
+npm install -g @jharding/mcp-server-steel-scraper
+```
+
+Or use it directly with npx without installing:
+
+```bash
+npx @jharding/mcp-server-steel-scraper
+```
+
+### Option 2: Local Development
 
 1. Clone this repository:
 ```bash
@@ -61,14 +101,14 @@ npm start
 
 Add this server to your MCP client configuration. Here are examples for popular LLM clients:
 
-#### For Claude Desktop / Cline / Other MCP Clients
+#### For Claude Desktop / Cline / Other MCP Clients (NPM Package)
 
 ```json
 {
   "mcpServers": {
     "steel-scraper": {
-      "command": "node",
-      "args": ["/path/to/mcp-server-steel-scraper/dist/index.js"],
+      "command": "npx",
+      "args": ["@jharding/mcp-server-steel-scraper"],
       "env": {
         "STEEL_API_URL": "http://localhost:3000"
       }
@@ -77,14 +117,14 @@ Add this server to your MCP client configuration. Here are examples for popular 
 }
 ```
 
-#### For Continue.dev
+#### For Continue.dev (NPM Package)
 
 ```json
 {
   "mcpServers": {
     "steel-scraper": {
-      "command": "node",
-      "args": ["/path/to/mcp-server-steel-scraper/dist/index.js"],
+      "command": "npx",
+      "args": ["@jharding/mcp-server-steel-scraper"],
       "env": {
         "STEEL_API_URL": "http://localhost:3000"
       }
@@ -93,14 +133,47 @@ Add this server to your MCP client configuration. Here are examples for popular 
 }
 ```
 
-#### For Cursor IDE
+#### For Cursor IDE (NPM Package)
 
 ```json
 {
   "mcpServers": {
     "steel-scraper": {
-      "command": "node",
-      "args": ["/path/to/mcp-server-steel-scraper/dist/index.js"],
+      "command": "npx",
+      "args": ["@jharding/mcp-server-steel-scraper"],
+      "env": {
+        "STEEL_API_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
+```
+
+#### For Remote Steel-dev Instance (NPM Package)
+
+```json
+{
+  "mcpServers": {
+    "steel-scraper": {
+      "command": "npx",
+      "args": ["@jharding/mcp-server-steel-scraper"],
+      "env": {
+        "STEEL_API_URL": "https://your-steel-dev-instance.com"
+      }
+    }
+  }
+}
+```
+
+#### Alternative: Using Global Installation
+
+If you've installed the package globally with `npm install -g @jharding/mcp-server-steel-scraper`, you can use:
+
+```json
+{
+  "mcpServers": {
+    "steel-scraper": {
+      "command": "mcp-server-steel-scraper",
       "env": {
         "STEEL_API_URL": "http://localhost:3000"
       }
@@ -116,25 +189,9 @@ Add this server to your MCP client configuration. Here are examples for popular 
   "mcpServers": {
     "steel-scraper": {
       "command": "node",
-      "args": ["/home/josh/Projects/mcp-server-steel-scraper/dist/index.js"],
-      "env": {
-        "STEEL_API_URL": "http://localhost:3000"
-      }
-    }
-  }
-}
-```
-
-#### For Remote Steel-dev Instance
-
-```json
-{
-  "mcpServers": {
-    "steel-scraper": {
-      "command": "node",
       "args": ["/path/to/mcp-server-steel-scraper/dist/index.js"],
       "env": {
-        "STEEL_API_URL": "https://your-steel-dev-instance.com"
+        "STEEL_API_URL": "http://localhost:3000"
       }
     }
   }
