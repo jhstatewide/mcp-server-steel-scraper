@@ -7,6 +7,7 @@ import {
 import { SteelAPI, ISteelScraperService, SteelDevScraperService } from "./steel-api.js";
 import { loadConfig } from "./config.js";
 import { formatSuccessResponse, formatErrorResponse } from "./response-formatter";
+import { SteelErrorCode } from "./errors.js";
 
 class SteelScraperServer {
   private server: Server;
