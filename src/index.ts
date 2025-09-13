@@ -8,9 +8,10 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { SteelAPI, ISteelScraperService, SteelDevScraperService } from "./steel-api.js";
 import { SteelErrorCode } from "./errors.js";
+import { loadConfig } from "./config.js";
 
-// Configuration
-const STEEL_API_URL = process.env.STEEL_API_URL || "http://localhost:3000";
+// Load configuration
+const config = loadConfig();
 
 class SteelScraperServer {
   private server: Server;
@@ -29,7 +30,7 @@ class SteelScraperServer {
       }
     );
 
-    this.steelScraperService = new SteelDevScraperService(STEEL_API_URL);
+    this.steelScraperService = new SteelDevScraperService(config.steelApiUrl);
     this.setupHandlers();
   }
 
@@ -124,104 +125,13 @@ class SteelScraperServer {
             verboseMode,
           });
 
-          // Create a more model-friendly response structure
+          // Handle successful response
           if (result.success) {
-            // Default: clean mode (minimal metadata, focus on content)
-            if (!verboseMode) {
-              const cleanText = result.metadata?.warnings && result.metadata.warnings.length > 0 
-                ? `[WARNING: ${result.metadata.warnings.join('; ')}]\n\n${result.data}`
-                : result.data;
-              
-              return {
-                content: [
-                  {
-                    type: "text",
-                    text: cleanText,
-                  },
-                ],
-              };
-            }
-            
-            // Verbose mode: full metadata
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: `SUCCESS: Successfully scraped ${result.metadata?.url}
-Method: ${result.metadata?.method} (stealth browser, anti-detection)
-Format: ${result.metadata?.format?.join(', ')}
-Status Code: ${result.statusCode}
-Processing Time: ${result.metadata?.processingTime}ms
-Content Length: ${result.metadata?.contentLength} characters${result.metadata?.truncated ? ` (truncated to ${result.metadata?.returnedLength} characters)` : ''}${result.metadata?.warnings && result.metadata.warnings.length > 0 ? `\nWarnings: ${result.metadata.warnings.join('; ')}` : ''}
-Content Type: ${result.metadata?.contentType}
-Timestamp: ${result.metadata?.timestamp}${result.metadata?.title ? `\nTitle: ${result.metadata.title}` : ''}${result.metadata?.description ? `\nDescription: ${result.metadata.description}` : ''}${result.metadata?.language ? `\nLanguage: ${result.metadata.language}` : ''}${result.screenshot ? '\nScreenshot: Available (base64)' : ''}${result.pdf ? '\nPDF: Available (base64)' : ''}${result.links && result.links.length > 0 ? `\nLinks Found: ${result.links.length}` : ''}
-
-SCRAPED CONTENT:
-${result.data}`,
-                },
-              ],
-            };
-          } else {
-            // Default: clean mode (minimal error info)
-            if (!verboseMode) {
-              // For clean mode, provide minimal error information
-              let errorText = `ERROR: Failed to scrape ${result.metadata?.url || 'unknown URL'}`;
-              
-              // Include error code if available
-              if (result.errorCode) {
-                errorText += ` (${result.errorCode})`;
-              }
-              
-              // Include basic error message
-              if (result.error) {
-                errorText += `: ${result.error}`;
-              }
-              
-              return {
-                content: [
-                  {
-                    type: "text",
-                    text: errorText,
-                  },
-                ],
-                isError: true,
-              };
-            }
-            
-            // Verbose mode: full error info including error code and metadata
-            let errorText = `ERROR: Failed to scrape ${result.metadata?.url || 'unknown URL'}\n`;
-            
-            // Include error code if available
-            if (result.errorCode) {
-              errorText += `Error Code: ${result.errorCode}\n`;
-            }
-            
-            // Include error message
-            if (result.error) {
-              errorText += `Error: ${result.error}\n`;
-            }
-            
-            // Include status code
-            errorText += `Status Code: ${result.statusCode || 'unknown'}\n`;
-            
-            // Include timestamp
-            errorText += `Timestamp: ${result.metadata?.timestamp || new Date().toISOString()}\n`;
-            
-            // Include error metadata if available
-            if (result.errorMetadata) {
-              errorText += `Error Metadata: ${JSON.stringify(result.errorMetadata, null, 2)}\n`;
-            }
-            
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: errorText,
-                },
-              ],
-              isError: true,
-            };
-          }
+            return this.formatSuccessResponse(result, verboseMode);
+          } 
+          
+          // Handle error response
+          return this.formatErrorResponse(result, verboseMode);
         } catch (error) {
           // Handle unexpected errors
           const errorText = error instanceof Error ? error.message : String(error);
@@ -242,6 +152,126 @@ ${result.data}`,
 
       throw new Error(`Unknown tool: ${request.params.name}`);
     });
+  }
+
+  /**
+   * Format a successful response based on verbose mode
+   */
+  private formatSuccessResponse(result: any, verboseMode: boolean) {
+    if (!verboseMode) {
+      // Clean mode: minimal metadata, focus on content
+      const cleanText = result.metadata?.warnings && result.metadata.warnings.length > 0 
+        ? `[WARNING: ${result.metadata.warnings.join('; ')}]\n\n${result.data}`
+        : result.data;
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: cleanText,
+          },
+        ],
+      };
+    }
+    
+    // Verbose mode: full metadata
+    const formatInfo = result.metadata?.format?.join(', ') || 'unknown';
+    const warningsInfo = result.metadata?.warnings && result.metadata.warnings.length > 0 
+      ? `\nWarnings: ${result.metadata.warnings.join('; ')}` 
+      : '';
+    const truncatedInfo = result.metadata?.truncated 
+      ? ` (truncated to ${result.metadata?.returnedLength} characters)` 
+      : '';
+    const linksInfo = result.links && result.links.length > 0 
+      ? `\nLinks Found: ${result.links.length}` 
+      : '';
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: `SUCCESS: Successfully scraped ${result.metadata?.url}
+Method: ${result.metadata?.method} (stealth browser, anti-detection)
+Format: ${formatInfo}
+Status Code: ${result.statusCode}
+Processing Time: ${result.metadata?.processingTime}ms
+Content Length: ${result.metadata?.contentLength} characters${truncatedInfo}${warningsInfo}
+Content Type: ${result.metadata?.contentType}
+Timestamp: ${result.metadata?.timestamp}${result.metadata?.title ? `\nTitle: ${result.metadata.title}` : ''}${result.metadata?.description ? `\nDescription: ${result.metadata.description}` : ''}${result.metadata?.language ? `\nLanguage: ${result.metadata.language}` : ''}${result.screenshot ? '\nScreenshot: Available (base64)' : ''}${result.pdf ? '\nPDF: Available (base64)' : ''}${linksInfo}
+
+SCRAPED CONTENT:
+${result.data}`,
+        },
+      ],
+    };
+  }
+
+  /**
+   * Format an error response based on verbose mode
+   */
+  private formatErrorResponse(result: any, verboseMode: boolean) {
+    if (!verboseMode) {
+      // Clean mode: minimal error information
+      let errorText = `ERROR: Failed to scrape ${result.metadata?.url || 'unknown URL'}`;
+      
+      // Include error code if available
+      if (result.errorCode) {
+        errorText += ` (${result.errorCode})`;
+      }
+      
+      // Include basic error message
+      if (result.error) {
+        errorText += `: ${result.error}`;
+      }
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: errorText,
+          },
+        ],
+        isError: true,
+      };
+    }
+    
+    // Verbose mode: full error information
+    let errorText = `ERROR: Failed to scrape ${result.metadata?.url || 'unknown URL'}\n`;
+    
+    // Include error code if available
+    if (result.errorCode) {
+      errorText += `Error Code: ${result.errorCode}\n`;
+    }
+    
+    // Include error message
+    if (result.error) {
+      errorText += `Error: ${result.error}\n`;
+    }
+    
+    // Include status code
+    errorText += `Status Code: ${result.statusCode || 'unknown'}\n`;
+    
+    // Include timestamp
+    errorText += `Timestamp: ${result.metadata?.timestamp || new Date().toISOString()}\n`;
+    
+    // Include error metadata if available
+    if (result.errorMetadata) {
+      try {
+        errorText += `Error Metadata: ${JSON.stringify(result.errorMetadata, null, 2)}\n`;
+      } catch (e) {
+        errorText += `Error Metadata: Unable to serialize metadata\n`;
+      }
+    }
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: errorText,
+        },
+      ],
+      isError: true,
+    };
   }
 
   async run() {
