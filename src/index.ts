@@ -8,15 +8,34 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { SteelAPI, ISteelScraperService, SteelDevScraperService } from "./steel-api.js";
 import { SteelErrorCode } from "./errors.js";
+import { StatefulBrowserController } from "./stateful.js";
+import type { Mode } from "./stateful.js";
 
 // Configuration
 const STEEL_API_URL = process.env.STEEL_API_URL || "http://localhost:3000";
 
+function parseMode(args: string[]): Mode {
+  const modeArg = args.find((arg) => arg.startsWith("--mode="));
+  if (!modeArg) return "both";
+  const value = modeArg.split("=", 2)[1]?.trim();
+  if (value === "stateless" || value === "stateful" || value === "both") {
+    return value;
+  }
+  return "both";
+}
+
 class SteelScraperServer {
   private server: Server;
-  private steelScraperService: ISteelScraperService;
+  private steelScraperService?: ISteelScraperService;
+  private statefulController?: StatefulBrowserController;
+  private enableStateless: boolean;
+  private enableStateful: boolean;
 
   constructor() {
+    const mode = parseMode(process.argv.slice(2));
+    this.enableStateless = mode !== "stateful";
+    this.enableStateful = mode !== "stateless";
+
     this.server = new Server(
       {
         name: "steel-scraper",
@@ -29,76 +48,100 @@ class SteelScraperServer {
       }
     );
 
-    this.steelScraperService = new SteelDevScraperService(STEEL_API_URL);
+    if (this.enableStateless) {
+      this.steelScraperService = new SteelDevScraperService(STEEL_API_URL);
+    }
+
+    if (this.enableStateful) {
+      this.statefulController = new StatefulBrowserController();
+    }
     this.setupHandlers();
   }
 
   private setupHandlers() {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      return {
-        tools: [
-          {
-            name: "visit_with_browser",
-            description: "Visit any website using full browser automation (stealth mode, anti-detection). Returns page content in your chosen format: 'html' for raw HTML source, 'markdown' for clean formatted text (recommended for reading), 'readability' for Mozilla Readability format, or 'cleaned_html' for cleaned HTML. Supports screenshot and PDF generation. Automatically handles JavaScript rendering and provides clean output by default.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                url: {
-                  type: "string",
-                  description: "The complete URL to scrape (must include http:// or https://)",
-                },
-                format: {
-                  type: "array",
-                  items: {
-                    type: "string",
-                    enum: ["html", "readability", "cleaned_html", "markdown"],
-                  },
-                  description: "Content formats to extract: 'html'=raw HTML source (may be very large), 'markdown'=clean formatted text converted from HTML (recommended for reading), 'readability'=Mozilla Readability format, 'cleaned_html'=cleaned HTML. You can request multiple formats.",
-                  default: ["markdown"],
-                },
-                screenshot: {
-                  type: "boolean",
-                  description: "Take a screenshot of the page (returns base64 encoded image)",
-                  default: false,
-                },
-                pdf: {
-                  type: "boolean",
-                  description: "Generate a PDF of the page (returns base64 encoded PDF)",
-                  default: false,
-                },
-                proxyUrl: {
-                  type: "string",
-                  description: "Proxy URL to use for the request (e.g., 'http://proxy:port')",
-                },
-                delay: {
-                  type: "number",
-                  description: "Delay in seconds to wait after page load before scraping",
-                  default: 0,
-                },
-                logUrl: {
-                  type: "string",
-                  description: "URL to send logs to for debugging purposes",
-                },
-                maxLength: {
-                  type: "number",
-                  description: "Maximum characters to return (optional). Smart defaults: markdown=8000, readability=10000, html=15000, cleaned_html=12000. For markdown, automatically reserves space for metadata.",
-                  default: null,
-                },
-                verboseMode: {
-                  type: "boolean",
-                  description: "Return full metadata instead of clean content-focused output (optional, default: false). Use when you need detailed scraping information.",
-                  default: false,
-                },
+      const tools = [];
+      if (this.enableStateless) {
+        tools.push({
+          name: "visit_with_browser",
+          description: "Visit any website using full browser automation (stealth mode, anti-detection). Returns page content in your chosen format: 'html' for raw HTML source, 'markdown' for clean formatted text (recommended for reading), 'readability' for Mozilla Readability format, or 'cleaned_html' for cleaned HTML. Supports screenshot and PDF generation. Automatically handles JavaScript rendering and provides clean output by default.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              url: {
+                type: "string",
+                description: "The complete URL to scrape (must include http:// or https://)",
               },
-              required: ["url"],
+              format: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: ["html", "readability", "cleaned_html", "markdown"],
+                },
+                description: "Content formats to extract: 'html'=raw HTML source (may be very large), 'markdown'=clean formatted text converted from HTML (recommended for reading), 'readability'=Mozilla Readability format, 'cleaned_html'=cleaned HTML. You can request multiple formats.",
+                default: ["markdown"],
+              },
+              screenshot: {
+                type: "boolean",
+                description: "Take a screenshot of the page (returns base64 encoded image)",
+                default: false,
+              },
+              pdf: {
+                type: "boolean",
+                description: "Generate a PDF of the page (returns base64 encoded PDF)",
+                default: false,
+              },
+              proxyUrl: {
+                type: "string",
+                description: "Proxy URL to use for the request (e.g., 'http://proxy:port')",
+              },
+              delay: {
+                type: "number",
+                description: "Delay in seconds to wait after page load before scraping",
+                default: 0,
+              },
+              logUrl: {
+                type: "string",
+                description: "URL to send logs to for debugging purposes",
+              },
+              maxLength: {
+                type: "number",
+                description: "Maximum characters to return (optional). Smart defaults: markdown=8000, readability=10000, html=15000, cleaned_html=12000. For markdown, automatically reserves space for metadata.",
+                default: null,
+              },
+              verboseMode: {
+                type: "boolean",
+                description: "Return full metadata instead of clean content-focused output (optional, default: false). Use when you need detailed scraping information.",
+                default: false,
+              },
             },
+            required: ["url"],
           },
-        ],
+        });
+      }
+
+      if (this.enableStateful && this.statefulController) {
+        tools.push(...this.statefulController.getTools());
+      }
+
+      return {
+        tools,
       };
     });
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (request.params.name === "visit_with_browser") {
+        if (!this.enableStateless || !this.steelScraperService) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "The stateless tool set is disabled. Start the server with --mode=stateless or --mode=both.",
+              },
+            ],
+            isError: true,
+          };
+        }
         try {
           const { url, format = ["markdown"], screenshot = false, pdf = false, proxyUrl, delay = 0, logUrl, maxLength, verboseMode = false } = request.params.arguments as {
             url: string;
@@ -240,6 +283,10 @@ ${result.data}`,
         }
       }
 
+      if (this.enableStateful && this.statefulController?.isTool(request.params.name)) {
+        return this.statefulController.handleTool(request.params.name, request.params.arguments ?? {});
+      }
+
       throw new Error(`Unknown tool: ${request.params.name}`);
     });
   }
@@ -249,6 +296,10 @@ ${result.data}`,
     await this.server.connect(transport);
     console.error("Steel Scraper MCP server running on stdio");
   }
+
+  async cleanup(): Promise<void> {
+    await this.statefulController?.cleanup();
+  }
 }
 
 // Start the server
@@ -256,4 +307,14 @@ const server = new SteelScraperServer();
 server.run().catch((error) => {
   console.error("Fatal error:", error);
   process.exit(1);
+});
+
+process.on("SIGINT", async () => {
+  await server.cleanup();
+  process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+  await server.cleanup();
+  process.exit(0);
 });

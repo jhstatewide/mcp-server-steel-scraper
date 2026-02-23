@@ -15,20 +15,22 @@ A simple Model Context Protocol (MCP) server that wraps the steel-dev API for vi
      "mcpServers": {
        "steel-scraper": {
          "command": "npx",
-         "args": ["@jharding_npm/mcp-server-steel-scraper"],
-         "env": {
-           "STEEL_API_URL": "http://localhost:3000"
-         }
-       }
-     }
-   }
+        "args": ["@jharding_npm/mcp-server-steel-scraper", "--mode=both"],
+        "env": {
+          "STEEL_API_URL": "http://localhost:3000"
+        }
+      }
+    }
+  }
    ```
 
-3. **Start using the `visit_with_browser` tool in your MCP client!**
+3. **Start using the stateless `visit_with_browser` tool, or the stateful interactive tools.**
 
 ## Features
 
-- **Single Tool**: `visit_with_browser` - Visit websites using steel-dev API
+- **Dual Modes**: Run stateless scraping, stateful interaction, or both via `--mode=stateless|stateful|both` (default: `both`)
+- **Stateless Tool**: `visit_with_browser` - Visit websites using steel-dev API
+- **Stateful Tools**: Create sessions and interact with pages (navigate, click, type, scroll, snapshot)
 - **Flexible Return Types**: HTML, markdown, readability, or cleaned HTML
 - **Local/Remote Support**: Works with local or remote steel-dev instances
 - **Browser Automation**: Screenshot capture, PDF generation, proxy support
@@ -78,6 +80,12 @@ The server uses environment variables for configuration:
 - `STEEL_API_URL`: The steel-dev API endpoint (default: `http://localhost:3000`)
 - `STEEL_TIMEOUT`: Request timeout in milliseconds (default: `30000`)
 - `STEEL_RETRIES`: Number of retry attempts (default: `3`)
+- `STEEL_LOCAL`: Set to `true` when using a local Steel instance for stateful sessions
+- `STEEL_BASE_URL`: Base URL for the Steel Sessions API (default: `https://api.steel.dev`, or `http://localhost:3000` when `STEEL_LOCAL=true`)
+- `STEEL_API_KEY`: Required for cloud mode stateful sessions
+- `STEEL_SESSION_TIMEOUT_MS`: Session timeout in milliseconds (default: `900000`)
+- `STEEL_GLOBAL_WAIT_SECONDS`: Optional delay after each stateful action (default: `0`)
+- `STEEL_IDLE_TIMEOUT_MS`: Auto-release idle sessions after this many milliseconds (default: `600000`, set to `0` to disable)
 
 Copy `env.example` to `.env` and modify as needed:
 
@@ -93,8 +101,20 @@ cp env.example .env
 # Development mode
 npm run dev
 
+# Auto-rebuild on changes (recommended for npm link workflows)
+npm run build:watch
+
 # Production mode
 npm start
+
+# Only stateless scraping tools
+npm start -- --mode=stateless
+
+# Only stateful interactive tools
+npm start -- --mode=stateful
+
+# Both tool sets (default)
+npm start -- --mode=both
 ```
 
 ### MCP Client Configuration
@@ -116,6 +136,8 @@ Add this server to your MCP client configuration. Here are examples for popular 
   }
 }
 ```
+
+To expose the stateful interactive tools, add `--mode=stateful` or `--mode=both` to the `args` array.
 
 #### For Continue.dev (NPM Package)
 
@@ -278,6 +300,60 @@ The server provides one tool: `visit_with_browser`
 }
 ```
 
+### Stateful Interactive Tools
+
+When running with `--mode=stateful` or `--mode=both`, the server exposes stateful tools that let the LLM interact with a live page.
+Stateful sessions are created via the Steel Sessions API and connected over CDP (Chrome DevTools Protocol).
+
+#### Available Tools
+
+- `session_create` - Create a new Steel session and connect
+- `session_release` - Release the current session
+- `navigate` - Navigate to a URL
+- `search` - Open Google search results for a query
+- `click` - Click an element by label
+- `type` - Type into an element by label
+- `scroll_down` / `scroll_up` - Scroll the page
+- `go_back` - Navigate back
+- `wait` - Wait a few seconds for dynamic content
+- `snapshot` - Annotated screenshot + labels list
+- `snapshot_unmarked` - Screenshot without labels
+- `page_content` - Return page HTML or text
+
+#### Example Session
+
+```javascript
+// Create a session
+{
+  "tool": "session_create",
+  "arguments": { "timeoutMs": 900000 }
+}
+
+// Navigate
+{
+  "tool": "navigate",
+  "arguments": { "url": "https://example.com" }
+}
+
+// Get an annotated snapshot (labels + image)
+{
+  "tool": "snapshot",
+  "arguments": {}
+}
+
+// Click a labeled element
+{
+  "tool": "click",
+  "arguments": { "label": 3 }
+}
+
+// Type into a labeled input
+{
+  "tool": "type",
+  "arguments": { "label": 5, "text": "hello", "replaceText": true }
+}
+```
+
 ## Smart Length Management
 
 The server automatically handles content length optimization:
@@ -427,6 +503,8 @@ This MCP server expects a steel-dev API instance running with the following endp
 - `POST /scrape` - Main scraping endpoint
 - `GET /health` - Health check endpoint (optional)
 - `GET /info` - API information endpoint (optional)
+- `POST /v1/sessions` - Create a stateful browser session
+- `POST /v1/sessions/{id}/release` - Release a stateful session
 
 ### Expected Request Format
 
