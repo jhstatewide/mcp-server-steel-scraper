@@ -6,6 +6,13 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(readFileSync(join(__dirname, "../package.json"), "utf-8"));
 import { SteelAPI, ISteelScraperService, SteelDevScraperService } from "./steel-api.js";
 import { SteelErrorCode } from "./errors.js";
 import { StatefulBrowserController } from "./stateful.js";
@@ -24,6 +31,33 @@ function parseMode(args: string[]): Mode {
   return "both";
 }
 
+function handleFlags(args: string[]): void {
+  const helpFlag = args.includes("--help") || args.includes("-h");
+  const versionFlag = args.includes("--version") || args.includes("-v");
+
+  if (helpFlag) {
+    console.log(`Usage: npx @jharding_npm/mcp-server-steel-scraper [options]`);
+    console.log(``);
+    console.log(`Options:`);
+    console.log(`  --mode=MODE              Run in specific mode: "stateless", "stateful", or "both" (default: both)`);
+    console.log(`  --help, -h               Show this help message`);
+    console.log(`  --version, -v            Show version information`);
+    console.log(``);
+    console.log(`Environment Variables:`);
+    console.log(`  STEEL_API_URL            Steel API URL (default: http://localhost:3000)`);
+    console.log(``);
+    console.log(`Examples:`);
+    console.log(`  npx @jharding_npm/mcp-server-steel-scraper`);
+    console.log(`  npx @jharding_npm/mcp-server-steel-scraper --mode=stateless`);
+    process.exit(0);
+  }
+
+  if (versionFlag) {
+    console.log(`@jharding_npm/mcp-server-steel-scraper v${packageJson.version}`);
+    process.exit(0);
+  }
+}
+
 class SteelScraperServer {
   private server: Server;
   private steelScraperService?: ISteelScraperService;
@@ -39,7 +73,7 @@ class SteelScraperServer {
     this.server = new Server(
       {
         name: "steel-scraper",
-        version: "1.0.0",
+        version: packageJson.version,
       },
       {
         capabilities: {
@@ -301,6 +335,9 @@ ${result.data}`,
     await this.statefulController?.cleanup();
   }
 }
+
+// Handle command line flags
+handleFlags(process.argv.slice(2));
 
 // Start the server
 const server = new SteelScraperServer();
