@@ -17,6 +17,7 @@ export interface ScrapeResult {
   success: boolean;
   data?: string;
   error?: string;
+  errorDetails?: any;
   errorCode?: string;
   errorMetadata?: Record<string, any>;
   statusCode?: number;
@@ -143,16 +144,33 @@ export class SteelDevScraperService implements ISteelScraperService {
           errorCode = SteelErrorCode.UNKNOWN_ERROR;
         }
 
+        const errorMessage = responseData.error || responseData.message || responseData.detail || `HTTP ${response.status}: ${response.statusText}`;
+
+        // Enhanced error message for known "Node is not defined" issue
+        let enhancedError = errorMessage;
+        if (typeof errorMessage === 'string' && errorMessage.includes('Node is not defined')) {
+            enhancedError = `${errorMessage} (The remote Steel server failed to convert the page to Markdown. Please try using format=['readability'] or format=['html'] instead.)`;
+        }
+
         return {
           success: false,
-          error: responseData.error || `HTTP ${response.status}: ${response.statusText}`,
+          error: enhancedError,
+          errorDetails: responseData,
           errorCode: errorCode,
           errorMetadata: {
             statusCode: response.status,
             statusText: response.statusText,
-            url: url
+            url: url,
+            requestId: responseData.request_id,
+            errorCode: responseData.error_code,
+            errorMessage: responseData.error_message
           },
           statusCode: response.status,
+          metadata: {
+            url,
+            timestamp: new Date().toISOString(),
+            format: format || []
+          }
         };
       }
 
@@ -433,16 +451,33 @@ export class SteelAPI {
           errorCode = SteelErrorCode.UNKNOWN_ERROR;
         }
 
+        const errorMessage = responseData.error || responseData.message || responseData.detail || `HTTP ${response.status}: ${response.statusText}`;
+
+        // Enhanced error message for known "Node is not defined" issue
+        let enhancedError = errorMessage;
+        if (typeof errorMessage === 'string' && errorMessage.includes('Node is not defined')) {
+            enhancedError = `${errorMessage} (The remote Steel server failed to convert the page to Markdown. Please try using format=['readability'] or format=['html'] instead.)`;
+        }
+
         return {
           success: false,
-          error: responseData.error || `HTTP ${response.status}: ${response.statusText}`,
+          error: enhancedError,
+          errorDetails: responseData,
           errorCode: errorCode,
           errorMetadata: {
             statusCode: response.status,
             statusText: response.statusText,
-            url: url
+            url: url,
+            requestId: responseData.request_id,
+            errorCode: responseData.error_code,
+            errorMessage: responseData.error_message
           },
           statusCode: response.status,
+          metadata: {
+            url,
+            timestamp: new Date().toISOString(),
+            format: format || []
+          }
         };
       }
 

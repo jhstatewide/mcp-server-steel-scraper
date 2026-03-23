@@ -1,6 +1,6 @@
 {
   "name": "@jharding_npm/mcp-server-steel-scraper",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "MCP server that wraps steel-dev API for web scraping",
   "main": "dist/index.js",
   "type": "module",

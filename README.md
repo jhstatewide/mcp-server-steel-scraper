@@ -128,7 +128,7 @@ Add this server to your MCP client configuration. Here are examples for popular 
   "mcpServers": {
     "steel-scraper": {
       "command": "npx",
-      "args": ["@jharding_npm/mcp-server-steel-scraper"],
+      "args": ["@jharding_npm/mcp-server-steel-scraper", "--mode=stateless"],
       "env": {
         "STEEL_API_URL": "http://localhost:3000"
       }
@@ -146,7 +146,7 @@ To expose the stateful interactive tools, add `--mode=stateful` or `--mode=both`
   "mcpServers": {
     "steel-scraper": {
       "command": "npx",
-      "args": ["@jharding_npm/mcp-server-steel-scraper"],
+      "args": ["@jharding_npm/mcp-server-steel-scraper", "--mode=stateless"],
       "env": {
         "STEEL_API_URL": "http://localhost:3000"
       }
@@ -162,7 +162,7 @@ To expose the stateful interactive tools, add `--mode=stateful` or `--mode=both`
   "mcpServers": {
     "steel-scraper": {
       "command": "npx",
-      "args": ["@jharding_npm/mcp-server-steel-scraper"],
+      "args": ["@jharding_npm/mcp-server-steel-scraper", "--mode=stateless"],
       "env": {
         "STEEL_API_URL": "http://localhost:3000"
       }
@@ -178,7 +178,7 @@ To expose the stateful interactive tools, add `--mode=stateful` or `--mode=both`
   "mcpServers": {
     "steel-scraper": {
       "command": "npx",
-      "args": ["@jharding_npm/mcp-server-steel-scraper"],
+      "args": ["@jharding_npm/mcp-server-steel-scraper", "--mode=stateless"],
       "env": {
         "STEEL_API_URL": "https://your-steel-dev-instance.com"
       }

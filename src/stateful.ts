@@ -310,7 +310,7 @@ export class StatefulBrowserController {
   private readonly sessionManager: SteelSessionManager;
   private readonly globalWaitSeconds: number;
   private readonly idleTimeoutMs: number;
-  private idleTimer: NodeJS.Timeout | null = null;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     const steelLocal = (process.env.STEEL_LOCAL ?? "true") === "true";

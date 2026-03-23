@@ -23,12 +23,12 @@ const STEEL_API_URL = process.env.STEEL_API_URL || "http://localhost:3000";
 
 function parseMode(args: string[]): Mode {
   const modeArg = args.find((arg) => arg.startsWith("--mode="));
-  if (!modeArg) return "both";
+  if (!modeArg) return "stateless";
   const value = modeArg.split("=", 2)[1]?.trim();
   if (value === "stateless" || value === "stateful" || value === "both") {
     return value;
   }
-  return "both";
+  return "stateless";
 }
 
 function handleFlags(args: string[]): void {
@@ -39,7 +39,7 @@ function handleFlags(args: string[]): void {
     console.log(`Usage: npx @jharding_npm/mcp-server-steel-scraper [options]`);
     console.log(``);
     console.log(`Options:`);
-    console.log(`  --mode=MODE              Run in specific mode: "stateless", "stateful", or "both" (default: both)`);
+    console.log(`  --mode=MODE              Run in specific mode: "stateless", "stateful", or "both" (default: stateless)`);
     console.log(`  --help, -h               Show this help message`);
     console.log(`  --version, -v            Show version information`);
     console.log(``);
